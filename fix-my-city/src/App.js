@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
-import { Camera, AlertTriangle, ThumbsUp, MessageSquare, MapPin, Menu, Search, Home, Tag, Bell, User } from 'lucide-react';
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
-import Login from './Login';
+import { Camera, AlertTriangle, ThumbsUp, MessageSquare, MapPin, Menu, Search, Home as HomeIcon, Tag, Bell, User, LogOut } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import PrivateRoute from './components/auth/PrivateRoute';
+
+// Auth components
+import Login from './components/auth/Login';
+import SignUp from './components/auth/SignUp';
+import ForgotPassword from './components/auth/ForgotPassword';
+
+// Application components
+import CreatePost from './components/posts/CreatePost';
+import PostDetail from './components/posts/PostDetail';
+import AdminDashboard from './components/admin/AdminDashboard';
 
 // Sample data for initial posts
 const initialPosts = [
@@ -52,14 +63,36 @@ const categories = [
   { name: "public safety", color: "bg-purple-500", icon: <AlertTriangle className="w-4 h-4" /> }
 ];
 
-// Header component
+// Header component with auth integration
 const Header = () => {
+  const { currentUser, logout, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  const handleReportClick = () => {
+    if (currentUser) {
+      navigate('/create-post');
+    } else {
+      navigate('/login');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to log out', error);
+    }
+  };
+
   return (
     <header className="bg-blue-600 p-4 sticky top-0 z-10">
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center space-x-2">
-          <AlertTriangle className="text-white" />
-          <h1 className="text-white text-xl font-bold">FixMyCity</h1>
+          <Link to="/" className="flex items-center space-x-2">
+            <AlertTriangle className="text-white" />
+            <h1 className="text-white text-xl font-bold">FixMyCity</h1>
+          </Link>
         </div>
         <div className="relative flex-1 max-w-lg mx-4">
           <input
@@ -70,12 +103,29 @@ const Header = () => {
           <Search className="absolute right-3 top-2.5 text-blue-300" size={18} />
         </div>
         <div className="flex items-center space-x-4">
-          <button className="bg-white text-blue-600 font-medium rounded-full px-4 py-1.5 flex items-center">
+          <button onClick={handleReportClick} className="bg-white text-blue-600 font-medium rounded-full px-4 py-1.5 flex items-center">
             <Camera size={18} className="mr-1" /> Report Issue
           </button>
-          <button className="text-white">
-            <Menu />
-          </button>
+          
+          {currentUser ? (
+            <div className="flex items-center space-x-2">
+              {isAdmin && (
+                <Link to="/admin" className="text-white hover:text-blue-200">
+                  Admin
+                </Link>
+              )}
+              <div className="text-white text-sm mr-2 hidden md:block">
+                {currentUser.displayName || currentUser.email}
+              </div>
+              <button onClick={handleLogout} className="text-white hover:text-blue-200">
+                <LogOut size={20} />
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" className="text-white hover:text-blue-200">
+              Login
+            </Link>
+          )}
         </div>
       </div>
     </header>
@@ -84,13 +134,16 @@ const Header = () => {
 
 // Navigation component
 const Navigation = () => {
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  
   return (
     <nav className="bg-white border-t border-gray-200 fixed bottom-0 w-full z-10">
       <div className="flex justify-around items-center py-2">
-        <button className="flex flex-col items-center p-2 text-blue-600">
-          <Home size={20} />
+        <Link to="/" className="flex flex-col items-center p-2 text-blue-600">
+          <HomeIcon size={20} />
           <span className="text-xs mt-1">Home</span>
-        </button>
+        </Link>
         <button className="flex flex-col items-center p-2 text-gray-500">
           <Tag size={20} />
           <span className="text-xs mt-1">Categories</span>
@@ -99,10 +152,10 @@ const Navigation = () => {
           <Bell size={20} />
           <span className="text-xs mt-1">Alerts</span>
         </button>
-        <button className="flex flex-col items-center p-2 text-gray-500">
+        <Link to={currentUser ? "/profile" : "/login"} className="flex flex-col items-center p-2 text-gray-500">
           <User size={20} />
           <span className="text-xs mt-1">Profile</span>
-        </button>
+        </Link>
       </div>
     </nav>
   );
@@ -174,11 +227,10 @@ const CategoryFilter = ({ selectedCategory, onSelectCategory }) => {
   );
 };
 
-// Main app component
-export default function App() {
+// Home component (previously in App)
+const HomePage = () => {
   const [posts, setPosts] = useState(initialPosts);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Filter posts by category
   const filteredPosts = selectedCategory === 'all' 
@@ -193,32 +245,72 @@ export default function App() {
   };
 
   return (
-    <div className="bg-gray-100 min-h-screen pb-16">
-      <Header />
+    <div className="pb-16">
+      <CategoryFilter 
+        selectedCategory={selectedCategory} 
+        onSelectCategory={setSelectedCategory} 
+      />
       
-      <main className="container mx-auto px-4 py-4">
-        <CategoryFilter 
-          selectedCategory={selectedCategory} 
-          onSelectCategory={setSelectedCategory} 
+      <div className="mb-4">
+        <h2 className="text-xl font-bold mb-2">
+          {selectedCategory === 'all' ? 'Recent Reports' : `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Issues`}
+        </h2>
+        <p className="text-gray-600 text-sm">Help improve your community by reporting and upvoting local issues</p>
+      </div>
+      
+      {filteredPosts.map(post => (
+        <PostCard 
+          key={post.id} 
+          post={post} 
+          onUpvote={handleUpvote} 
         />
-        
-        <div className="mb-4">
-          <h2 className="text-xl font-bold mb-2">
-            {selectedCategory === 'all' ? 'Recent Reports' : `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Issues`}
-          </h2>
-          <p className="text-gray-600 text-sm">Help improve your community by reporting and upvoting local issues</p>
-        </div>
-        
-        {filteredPosts.map(post => (
-          <PostCard 
-            key={post.id} 
-            post={post} 
-            onUpvote={handleUpvote} 
-          />
-        ))}
-      </main>
-      
-      <Navigation />
+      ))}
     </div>
+  );
+};
+
+// Main app component
+export default function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <div className="bg-gray-100 min-h-screen">
+          <Header />
+          
+          <main className="container mx-auto px-4 py-4">
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/SignUp" element={<SignUp />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/post/:postId" element={<PostDetail />} />
+              
+              {/* Protected routes */}
+              <Route 
+                path="/create-post" 
+                element={
+                  <PrivateRoute>
+                    <CreatePost />
+                  </PrivateRoute>
+                } 
+              />
+              
+              {/* Admin routes */}
+              <Route 
+                path="/admin" 
+                element={
+                  <PrivateRoute requireAdmin={true}>
+                    <AdminDashboard />
+                  </PrivateRoute>
+                } 
+              />
+            </Routes>
+          </main>
+          
+          <Navigation />
+        </div>
+      </AuthProvider>
+    </Router>
   );
 }
