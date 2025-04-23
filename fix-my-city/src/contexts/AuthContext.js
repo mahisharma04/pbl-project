@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
   const [userRole, setUserRole] = useState('user');
   const [loading, setLoading] = useState(true);
 
-  async function SignUp(email, password, displayName) {
+  async function signUp(email, password, displayName) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
@@ -89,7 +89,7 @@ export function AuthProvider({ children }) {
     currentUser,
     userRole,
     isAdmin: userRole === 'admin',
-    SignUp,
+    signUp,
     loginWithEmail,
     logout,
     resetPassword,

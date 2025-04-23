@@ -16,7 +16,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyABVPuIRBRIcpivOJDYg4UWaZAeSEKBoCA",
   authDomain: "fix-my-city-4.firebaseapp.com",
   projectId: "fix-my-city-4",
-  storageBucket: "fix-my-city-4.firebasestorage.app",
+  storageBucket: "fix-my-city-4.appspot.com",
   messagingSenderId: "265141189738",
   appId: "1:265141189738:web:a02ec72f8e31725fd89e13",
   measurementId: "G-MYCWM7MZNE"

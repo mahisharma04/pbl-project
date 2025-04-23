@@ -9,7 +9,7 @@ function SignUp() {
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
+  const { signUp } = useAuth();
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
@@ -22,7 +22,7 @@ function SignUp() {
     try {
       setError('');
       setLoading(true);
-      await signup(email, password, displayName);
+      await signUp(email, password, displayName);
       navigate('/');
     } catch (error) {
       setError('Failed to create an account: ' + error.message);
