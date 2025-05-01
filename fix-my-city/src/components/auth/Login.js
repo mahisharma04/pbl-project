@@ -16,13 +16,26 @@ function Login() {
     try {
       setError('');
       setLoading(true);
-      await loginWithEmail(email, password);
+      
+      // Call the updated loginWithEmail function that now syncs with the backend
+      const result = await loginWithEmail(email, password);
+      
+      // If login is successful, navigate to home
       navigate('/');
     } catch (error) {
-      setError('Failed to sign in: ' + error.message);
+      console.error("Login error:", error);
+      
+      // Provide more specific error messages based on Firebase errors
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        setError('Invalid email or password');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many failed login attempts. Please try again later.');
+      } else {
+        setError('Failed to sign in: ' + (error.message || 'Please try again'));
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   }
 
   return (
